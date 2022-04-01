@@ -1,23 +1,22 @@
 import { Link } from "react-router-dom";
-import { Organization } from "../../api";
 
+import { Organization } from "../../api";
+import { useData } from "../../data-context";
 import { NamedComponent } from "../../types";
-import { useData } from "../../useData";
 
 const OrganizationOverview: NamedComponent = function OrganizationOverview() {
-  const { isLoading, result } =
-    useData<{ organizations: Pick<Organization, "id" | "slug">[] }>(
-      OrganizationOverview
-    );
+  const { isLoading, data } = useData<{
+    organizations: Pick<Organization, "id" | "slug">[];
+  }>(OrganizationOverview);
 
   if (isLoading) return <p>Loading data...</p>;
-  if (!result?.data) return <p>Error :(</p>;
+  if (!data) return <p>Error :(</p>;
 
   return (
     <>
       <h1>Organizations</h1>
       <ul>
-        {result.data.organizations.map((org) => (
+        {data.organizations.map((org) => (
           <li key={org.id}>
             <Link to={org.slug}>{org.slug}</Link>
           </li>

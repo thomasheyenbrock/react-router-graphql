@@ -15,5 +15,8 @@ export const args: Args = [
   {
     name: "orgSlug",
     type: { kind: Kind.NAMED_TYPE, name: { kind: Kind.NAME, value: "String" } },
+    getValue(match) {
+      return match.params.orgSlug;
+    },
   },
 ];

@@ -1,15 +1,16 @@
 import { Link, Outlet } from "react-router-dom";
 
 import { Organization } from "../../api";
+import { useData } from "../../data-context";
 import { NamedComponent } from "../../types";
-import { useData } from "../../useData";
 
 const Root: NamedComponent = function Root() {
-  const { isLoading, result } =
-    useData<{ organizations: Pick<Organization, "id" | "slug">[] }>(Root);
+  const { isLoading, data } = useData<{
+    organizations: Pick<Organization, "id" | "slug">[];
+  }>(Root);
 
   if (isLoading) return <p>Loading data...</p>;
-  if (!result?.data) return <p>Error :(</p>;
+  if (!data) return <p>Error :(</p>;
 
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
@@ -18,7 +19,7 @@ const Root: NamedComponent = function Root() {
           <li>
             <Link to="/organizations">Organizations</Link>
             <ul>
-              {result.data.organizations.map((org) => (
+              {data.organizations.map((org) => (
                 <li key={org.id}>
                   <Link to={`/organizations/${org.slug}`}>{org.slug}</Link>
                 </li>

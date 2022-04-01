@@ -1,22 +1,18 @@
-import { useParams } from "react-router-dom";
 import { Organization } from "../../api";
-
+import { useData } from "../../data-context";
 import { NamedComponent } from "../../types";
-import { useData } from "../../useData";
 
 const OrganizationView: NamedComponent = function OrganizationView() {
-  const params = useParams();
-  const { isLoading, result } = useData<{ organization: Organization }>(
-    OrganizationView,
-    { orgSlug: params.orgSlug }
+  const { isLoading, data } = useData<{ organization: Organization }>(
+    OrganizationView
   );
 
   if (isLoading) return <p>Loading data...</p>;
-  if (!result?.data) return <p>Error :(</p>;
+  if (!data) return <p>Error :(</p>;
   return (
     <>
-      <h1>{result.data.organization.slug}</h1>
-      <p>Name: {result.data.organization.name}</p>
+      <h1>{data.organization.slug}</h1>
+      <p>Name: {data.organization.name}</p>
     </>
   );
 };
