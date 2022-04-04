@@ -1,16 +1,16 @@
 import { User } from "../../api";
-import { useData } from "../../data-context";
+import { State, useData } from "../../data-context";
 import { NamedComponent } from "../../types";
 
 const Settings: NamedComponent = function Settings() {
-  const { isLoading, data } = useData<{ user: User }>(Settings);
+  const request = useData<{ user: User }>(Settings);
 
-  if (isLoading) return <p>Loading data...</p>;
-  if (!data) return <p>Error :(</p>;
+  if (request.state === State.FETCHING) return <p>Loading data...</p>;
+  if (!request.hasData) return <p>Error :(</p>;
   return (
     <>
       <h1>Settings</h1>
-      <p>Username: {data.user.fullName}</p>
+      <p>Username: {request.data.user.fullName}</p>
     </>
   );
 };

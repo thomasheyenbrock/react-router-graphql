@@ -1,18 +1,16 @@
 import { Organization } from "../../api";
-import { useData } from "../../data-context";
+import { State, useData } from "../../data-context";
 import { NamedComponent } from "../../types";
 
 const OrganizationView: NamedComponent = function OrganizationView() {
-  const { isLoading, data } = useData<{ organization: Organization }>(
-    OrganizationView
-  );
+  const request = useData<{ organization: Organization }>(OrganizationView);
 
-  if (isLoading) return <p>Loading data...</p>;
-  if (!data) return <p>Error :(</p>;
+  if (request.state === State.FETCHING) return <p>Loading data...</p>;
+  if (!request.hasData) return <p>Error :(</p>;
   return (
     <>
-      <h1>{data.organization.slug}</h1>
-      <p>Name: {data.organization.name}</p>
+      <h1>{request.data.organization.slug}</h1>
+      <p>Name: {request.data.organization.name}</p>
     </>
   );
 };

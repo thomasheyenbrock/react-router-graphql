@@ -1,8 +1,8 @@
 import {
   DefinitionNode,
   DocumentNode,
-  ExecutionResult,
   FragmentSpreadNode,
+  GraphQLError,
   Kind,
   OperationTypeNode,
   VariableDefinitionNode,
@@ -22,12 +22,46 @@ import { Args, NamedComponent } from "./types";
 
 type Pathname = string;
 type Data = Record<string, unknown> | null | undefined;
-type State<D extends Data = Data> = {
-  isLoading: boolean;
-  data: D;
-  errors: ExecutionResult["errors"];
-};
-export type DataStore = Record<Pathname, State>;
+export enum State {
+  "EMPTY",
+  "FETCHING",
+  "REFETCHING",
+  "DATA",
+  "ERROR",
+}
+type GraphQLRequest<D extends Data = Data> =
+  | { state: State.EMPTY; hasData: false }
+  | { state: State.FETCHING; hasData: false }
+  | {
+      state: State.REFETCHING;
+      hasData: boolean;
+      data: D;
+      errors: GraphQLError[] | null;
+    }
+  | { state: State.DATA; hasData: boolean; data: D }
+  | { state: State.ERROR; hasData: boolean; data: D; errors: GraphQLError[] };
+export type DataStore = Record<Pathname, GraphQLRequest>;
+
+function setRefetching(request: GraphQLRequest) {
+  request.state = State.REFETCHING;
+}
+
+function setData(request: GraphQLRequest, data: Data) {
+  request.state = State.DATA;
+  request.hasData = !!data;
+  (request as any).data = data;
+}
+
+function setErrors(
+  request: GraphQLRequest,
+  errors: readonly GraphQLError[],
+  data: Data
+) {
+  request.state = State.ERROR;
+  request.hasData = !!data;
+  (request as any).data = data;
+  (request as any).errors = errors;
+}
 
 const DataContext = createContext<DataStore>({});
 
@@ -122,20 +156,15 @@ export function DataContextProvider(props: { children: React.ReactNode }) {
     }
 
     const queries = fragmentsWithArgs.map(combineFragmentsIntoQuery);
-    console.log(queries);
 
     setStore((currentStore) => {
       const updatedStore = { ...currentStore };
       for (const { pathnames } of queries) {
         for (const pathname of pathnames) {
           if (updatedStore[pathname]) {
-            updatedStore[pathname].isLoading = true;
+            setRefetching(updatedStore[pathname]);
           } else {
-            updatedStore[pathname] = {
-              isLoading: true,
-              data: null,
-              errors: undefined,
-            };
+            updatedStore[pathname] = { state: State.FETCHING, hasData: false };
           }
         }
       }
@@ -147,9 +176,11 @@ export function DataContextProvider(props: { children: React.ReactNode }) {
         setStore((currentStore) => {
           const updatedStore = { ...currentStore };
           for (const pathname of pathnames) {
-            updatedStore[pathname].isLoading = false;
-            updatedStore[pathname].data = result.data;
-            updatedStore[pathname].errors = result.errors;
+            if (result.errors) {
+              setErrors(updatedStore[pathname], result.errors, result.data);
+            } else {
+              setData(updatedStore[pathname], result.data);
+            }
           }
           return updatedStore;
         });
@@ -162,18 +193,23 @@ export function DataContextProvider(props: { children: React.ReactNode }) {
   );
 }
 
-export function useData<D extends Data>(component: NamedComponent) {
+export function useData<D extends Data>(
+  component: NamedComponent
+): GraphQLRequest<D> {
   const location = useLocation();
   const matches = useMemo(() => matchRoutes(routes, location), [location]);
-
-  const emptyState = { isLoading: false, data: null, errors: undefined };
 
   const pathname = matches?.find((match) => {
     const route = match.route as ExtendedRouteObject;
     return route.componentName === component.displayName;
   })?.pathname;
-  if (!pathname) return emptyState;
+  if (!pathname) return { state: State.EMPTY, hasData: false };
 
   const store = useContext(DataContext);
-  return (store[pathname] as State<D>) || emptyState;
+  return (
+    (store[pathname] as GraphQLRequest<D>) || {
+      state: State.EMPTY,
+      hasData: false,
+    }
+  );
 }
